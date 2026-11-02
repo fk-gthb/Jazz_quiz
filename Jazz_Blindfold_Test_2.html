@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Jazz Blindfold Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one centred listening card, settings strip above, score below — a record sleeve in ink and brass */
+:root{
+  --ink:#10141f; --panel:#181e2d; --line:#2a3247; --fg:#ece6d8; --muted:#9aa1b4;
+  --brass:#e2a93b; --brass-dim:#8a6a2c; --good:#6fc28b; --bad:#e2735f;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ink);color:var(--fg);font:15px/1.55 var(--body);min-height:100vh;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font:800 clamp(38px,9vw,60px)/.9 var(--display);letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
+h1 span{color:var(--brass)}
+.sub{color:var(--muted);font-size:13px;margin:6px 0 0}
+.score{font:500 13px var(--mono);color:var(--muted);text-align:right}
+.score b{display:block;font:800 34px/1 var(--display);color:var(--brass)}
+.settings{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.settings label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);flex:1 1 160px}
+select,input{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%}
+select:focus,input:focus,button:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+button{font:600 14px var(--body);cursor:pointer;border-radius:6px;border:1px solid var(--brass);background:transparent;color:var(--brass);padding:10px 16px}
+button.solid{background:var(--brass);color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px;display:flex;flex-direction:column;gap:18px}
+.count{font:500 12px var(--mono);color:var(--muted);letter-spacing:.06em}
+.player{display:flex;align-items:center;gap:18px}
+.disc{position:relative;width:96px;height:96px;flex:none}
+.disc svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.disc button{position:absolute;inset:10px;border-radius:50%;border:none;background:var(--brass);color:var(--ink);font-size:26px;padding:0;display:grid;place-items:center}
+.ptext{min-width:0}
+.ptext strong{font:800 24px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;display:block}
+.ptext small{color:var(--muted)}
+.fields{display:grid;gap:12px}
+.fields label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.reveal{border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:12px}
+.answer h2{font:800 30px/1 var(--display);text-transform:uppercase;margin:0;text-wrap:balance}
+.answer p{margin:4px 0 0;color:var(--muted)}
+.checks{display:grid;gap:6px}
+.chk{display:grid;grid-template-columns:22px 92px 1fr auto;gap:8px;align-items:center;font-size:14px}
+.chk .mark{font-weight:600}
+.chk.ok .mark{color:var(--good)} .chk.no .mark{color:var(--bad)}
+.chk .lab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.chk .yours{min-width:0;overflow-wrap:anywhere;color:var(--muted)}
+.chk button{padding:3px 8px;font-size:12px;border-color:var(--line);color:var(--muted)}
+.note{border-left:3px solid var(--brass-dim);padding:2px 0 2px 12px;font-size:14px}
+a{color:var(--brass)}
+.err{color:var(--bad);font-size:13px}
+.summary ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
+.summary h2{font:800 34px/1 var(--display);text-transform:uppercase;margin:0}
+@media (max-width:440px){.chk{grid-template-columns:22px 1fr auto}.chk .yours{grid-column:2/4}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Blindfold <span>Test</span></h1>
+      <p class="sub">Hear 20 seconds. Name the tune, the musician and the era.</p>
+    </div>
+    <div class="score"><b id="scoreBig">0</b><span id="scoreSmall">points this round</span></div>
+  </header>
+
+  <div class="settings">
+    <label for="fPeriod">Era<select id="fPeriod"></select></label>
+    <label for="fSize">Round<select id="fSize"><option value="10">10 tracks</option><option value="20">20 tracks</option><option value="999">All tracks</option></select></label>
+    <button id="newRound" class="solid" type="button">New round</button>
+  </div>
+
+  <section class="card" id="card"></section>
+  <p class="sub">Previews come from Apple's free 30-second clips, so you need an internet connection. Nothing about the track is shown until you reveal it.</p>
+</div>
+
+<script>
+const PERIODS=["New Orleans jazz","Swing","Gypsy jazz","Bebop","Latin jazz","Cool jazz","Hard bop","Modal jazz","Free jazz","Bossa nova","Jazz fusion","European jazz / ECM","Neo-traditional revival","Contemporary jazz"];
+// [era, musician, song, album, year, search term, accepted musician keys, alt titles, note]
+const T=[
+["New Orleans jazz","King Oliver's Creole Jazz Band","Dipper Mouth Blues","Original 78 rpm single","1923","King Oliver Dipper Mouth Blues",["oliver"],[],"Collective improvisation, and a young Louis Armstrong on second cornet. Oliver's muted wah-wah solo became a model copied for decades."],
+["New Orleans jazz","Jelly Roll Morton","Black Bottom Stomp","Original 78 rpm single (Red Hot Peppers)","1926","Jelly Roll Morton Black Bottom Stomp",["morton","jelly"],[],"Tightly arranged polyphony: Morton composed the breaks and stop-times, proof that early jazz was written as well as improvised."],
+["New Orleans jazz","Louis Armstrong","West End Blues","The Hot Fives & Hot Sevens","1928","Louis Armstrong West End Blues",["armstrong","satchmo"],[],"The famous unaccompanied trumpet cadenza at the opening: the moment the soloist became the star of jazz."],
+["Swing","Duke Ellington","Take the A Train","Never No Lament: The Blanton-Webster Band","1941","Duke Ellington Take the A Train",["ellington","duke","strayhorn"],["a train"],"Written by Billy Strayhorn, it became the band's signature tune. Listen for the saxophone section swinging as one voice."],
+["Swing","Count Basie","One O'Clock Jump","Original 78 rpm single","1937","Count Basie One O'Clock Jump",["basie"],[],"Built on riffs passed between sections, over the light 'All-American Rhythm Section'. Basie's sparse piano says a lot with few notes."],
+["Bebop","Charlie Parker","Ko-Ko","The Complete Savoy and Dial Master Takes","1945","Charlie Parker Ko-Ko",["parker","bird"],["koko"],"Breakneck tempo on the chords of 'Cherokee'. A manifesto of bebop: speed, complex harmony and long, unpredictable lines."],
+["Bebop","Dizzy Gillespie","Salt Peanuts","Original 78 rpm single","1945","Dizzy Gillespie Salt Peanuts",["gillespie","dizzy"],[],"The octave-jump hook sung by the band is the giveaway. Dizzy's trumpet flies in the high register over the bebop drums."],
+["Bebop","Thelonious Monk","Round Midnight","Genius of Modern Music, Vol. 1","1947","Thelonious Monk Round Midnight",["monk","thelonious"],["round about midnight"],"The most recorded jazz ballad. Monk's dissonant chords and deliberate pauses make the piano sound slightly 'wrong' on purpose."],
+["Bebop","Bud Powell","Un Poco Loco","The Amazing Bud Powell, Vol. 1","1951","Bud Powell Un Poco Loco",["powell","bud"],[],"Latin-tinged, obsessive cowbell rhythm under Powell's right hand, which plays like a bebop horn on the piano."],
+["Cool jazz","Miles Davis","Boplicity","Birth of the Cool","1949","Miles Davis Boplicity",["davis","miles"],[],"Nonet with French horn and tuba: soft, blended textures and relaxed tempo. The calm answer to bebop's fire."],
+["Cool jazz","Chet Baker","My Funny Valentine","Chet Baker Sings","1954","Chet Baker My Funny Valentine",["baker","chet"],[],"Fragile, almost whispered vocals with no vibrato. The voice and trumpet sound alike: intimate West Coast cool."],
+["Cool jazz","Dave Brubeck Quartet","Take Five","Time Out","1959","Dave Brubeck Take Five",["brubeck","desmond"],[],"In 5/4 time, the giveaway being the lopsided piano vamp. Written by alto saxophonist Paul Desmond, whose tone is dry and airy."],
+["Hard bop","Art Blakey and the Jazz Messengers","Moanin'","Moanin'","1958","Art Blakey Moanin",["blakey","messengers","timmons"],["moanin","moaning"],"Gospel call-and-response between piano and horns. Hard bop brings blues and church back into bebop. Blakey's press rolls drive the band."],
+["Hard bop","Horace Silver","Song for My Father","Song for My Father","1965","Horace Silver Song for My Father",["silver","horace"],[],"Bossa-like bass line inspired by Cape Verdean music, Silver's father's homeland. Steely Dan later borrowed the intro."],
+["Modal jazz","Miles Davis","So What","Kind of Blue","1959","Miles Davis So What",["davis","miles"],[],"The bass asks the question, the horns answer 'so what'. Only two scales for the whole tune: the core idea of modal jazz."],
+["Modal jazz","Miles Davis with Bill Evans","Blue in Green","Kind of Blue","1959","Miles Davis Blue in Green",["davis","miles","evans"],[],"A slow, dreamy ballad with Bill Evans' impressionist piano voicings and Miles on muted trumpet."],
+["Modal jazz","John Coltrane","My Favorite Things","My Favorite Things","1961","John Coltrane My Favorite Things",["coltrane","trane"],[],"A Broadway waltz turned into a long, hypnotic modal trance. Coltrane plays soprano saxophone, nearly oriental in sound."],
+["Modal jazz","John Coltrane","Acknowledgement","A Love Supreme","1965","John Coltrane A Love Supreme Acknowledgement",["coltrane","trane"],["a love supreme","love supreme"],"Gong, then the four-note bass motif chanted later by the band as 'a love supreme'. A spiritual suite."],
+["Modal jazz","Herbie Hancock","Maiden Voyage","Maiden Voyage","1965","Herbie Hancock Maiden Voyage",["hancock","herbie"],[],"Suspended chords that never resolve, like a boat floating on the sea. A model of modal composition."],
+["Free jazz","Ornette Coleman","Lonely Woman","The Shape of Jazz to Come","1959","Ornette Coleman Lonely Woman",["coleman","ornette"],[],"Fast drums under a slow, mournful melody: two tempos at once. No piano, so no fixed chords."],
+["Free jazz","John Coltrane","Ascension","Ascension","1965","John Coltrane Ascension",["coltrane","trane"],[],"Eleven musicians improvising collectively in dense, screaming waves. Late Coltrane at its most radical."],
+["Free jazz","Cecil Taylor","Steps","Unit Structures","1966","Cecil Taylor Steps Unit Structures",["taylor","cecil"],[],"Percussive piano clusters at high energy. Taylor treats the piano like 88 tuned drums."],
+["Jazz fusion","Miles Davis","Bitches Brew","Bitches Brew","1970","Miles Davis Bitches Brew",["davis","miles"],[],"Electric pianos, bass clarinet, echo on the trumpet and a rock groove. The dark, dense birth of fusion."],
+["Jazz fusion","Herbie Hancock","Chameleon","Head Hunters","1973","Herbie Hancock Chameleon",["hancock","herbie","headhunters"],[],"Funky synth bass line that you can't forget. One of the best-selling jazz albums ever."],
+["Jazz fusion","Weather Report","Birdland","Heavy Weather","1977","Weather Report Birdland",["weather","zawinul","pastorius","shorter"],[],"Joe Zawinul's synthesiser melody and Jaco Pastorius' singing bass harmonics. A tribute to the New York club Birdland."],
+["Gypsy jazz","Django Reinhardt and Stéphane Grappelli","Minor Swing","Original 78 rpm single","1937","Django Reinhardt Minor Swing",["reinhardt","django","grappelli","hot club"],[],"No drums: the rhythm guitars' 'pompe' drives it. Django's guitar and Grappelli's violin trade lines over a minor riff."],
+["Gypsy jazz","Django Reinhardt","Nuages","Original 78 rpm single","1940","Django Reinhardt Nuages",["reinhardt","django"],[],"A melancholic ballad that became a song of hope in occupied Paris. Django's vibrato and tremolo are unmistakable."],
+["Latin jazz","Dizzy Gillespie and Chano Pozo","Manteca","Original 78 rpm single","1947","Dizzy Gillespie Manteca",["gillespie","dizzy","pozo"],[],"Starts with congas and a bass ostinato, then the big band shouts 'Manteca!'. The founding hit of Afro-Cuban jazz."],
+["Latin jazz","Machito and his Afro-Cubans","Tanga","Original 78 rpm single","1943","Machito Tanga",["machito","bauza","afro-cubans","afro cubans"],[],"Mario Bauzá's composition for Machito's band, often called the first true Latin jazz piece: jazz horns over Cuban clave."],
+["Latin jazz","Tito Puente","Oye Como Va","El Rey Bravo","1962","Tito Puente Oye Como Va",["puente","tito"],[],"Cha-cha-chá groove with organ-like riff and timbales. Santana's rock version (1970) made it world-famous."],
+["Bossa nova","Stan Getz and João Gilberto","The Girl from Ipanema","Getz/Gilberto","1964","Getz Gilberto Girl from Ipanema",["getz","gilberto","jobim"],["girl from ipanema","garota de ipanema"],"Astrud Gilberto's cool English vocal, João's Portuguese, Getz's soft tenor. Jobim's song conquered the world."],
+["Bossa nova","Stan Getz and Charlie Byrd","Desafinado","Jazz Samba","1962","Stan Getz Charlie Byrd Desafinado",["getz","byrd"],[],"Means 'slightly out of tune': the melody plays with awkward intervals on purpose. This album launched the US bossa craze."],
+["Bossa nova","João Gilberto","Chega de Saudade","Chega de Saudade","1959","Joao Gilberto Chega de Saudade",["gilberto","joao"],[],"The record that invented bossa nova: João's whispered voice and his syncopated 'violão gago' guitar strum."],
+["European jazz / ECM","Keith Jarrett","Part I","The Köln Concert","1975","Keith Jarrett Koln Concert Part I",["jarrett","keith"],["koln concert","the koln concert","koeln concert","cologne concert","part 1"],"Totally improvised solo piano at the Cologne Opera, on a poor-quality piano. Repetitive vamps and gospel-like melodies."],
+["European jazz / ECM","Jan Garbarek and The Hilliard Ensemble","Parce mihi domine","Officium","1994","Jan Garbarek Hilliard Parce mihi domine",["garbarek","hilliard"],["parce mihi"],"Renaissance vocal polyphony with a Norwegian saxophone floating above. The typical spacious ECM sound."],
+["European jazz / ECM","Esbjörn Svensson Trio","From Gagarin's Point of View","From Gagarin's Point of View","1999","Esbjorn Svensson Trio From Gagarins Point of View",["svensson","est","e.s.t"],["gagarin"],"Swedish piano trio with pop melody, electronic touches and wide open space. Jazz that sounds like film music."],
+["Neo-traditional revival","Wynton Marsalis","Black Codes","Black Codes (From the Underground)","1985","Wynton Marsalis Black Codes",["wynton","marsalis"],["black codes from the underground"],"Acoustic, virtuosic and complex, in the spirit of Miles' 1960s quintet. Wynton's crisp trumpet is very precise."],
+["Neo-traditional revival","Branford Marsalis","Three Little Words","Trio Jeepy","1989","Branford Marsalis Three Little Words",["branford","marsalis"],[],"Saxophone trio, bass and drums only, playing a 1930s standard with a loose, swinging feel."],
+["Neo-traditional revival","Roy Hargrove","Strasbourg/St. Denis","Earfood","2008","Roy Hargrove Strasbourg St Denis",["hargrove","roy"],["strasbourg st denis","strasbourg saint denis"],"Named after a Paris métro station. A catchy hard-bop groove with soul, now a modern standard."],
+["Contemporary jazz","Kamasi Washington","Change of the Guard","The Epic","2015","Kamasi Washington Change of the Guard",["kamasi","washington"],[],"Huge sound: choir, strings, two drummers and a spiritual tenor sax. Coltrane's legacy at cinematic scale."],
+["Contemporary jazz","Robert Glasper Experiment (with Erykah Badu)","Afro Blue","Black Radio","2012","Robert Glasper Afro Blue",["glasper","badu"],[],"Mongo Santamaría's standard reworked as neo-soul with Erykah Badu's voice. Jazz meets hip-hop production."],
+["Contemporary jazz","Sons of Kemet","My Queen Is Harriet Tubman","Your Queen Is a Reptile","2018","Sons of Kemet My Queen Is Harriet Tubman",["kemet","shabaka","hutchings"],["harriet tubman"],"London scene: tuba bass, two drummers and Shabaka Hutchings' Caribbean-flavoured sax. Danceable and political."]
+].map((r,i)=>({id:i,era:r[0],musician:r[1],song:r[2],album:r[3],year:r[4],term:r[5],keys:r[6],alt:r[7],note:r[8]}));
+
+const CLIP=20;
+const $=s=>document.querySelector(s);
+const norm=s=>(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/['’]/g,"").replace(/[^a-z0-9]+/g," ").replace(/\b(the|a|an)\b/g," ").replace(/\s+/g," ").trim();
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=[...Array(n+1).keys()];for(let i=1;i<=m;i++){let c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+function titleOk(ans,t){const a=norm(ans);if(a.length<2)return false;return [t.song,...t.alt].some(x=>{const k=norm(x);return k===a||(a.length>=4&&(k.includes(a)&&a.length>=k.length*.6))||a.includes(k)||1-lev(a,k)/Math.max(a.length,k.length)>=.75})}
+function musicianOk(ans,t){const a=" "+norm(ans)+" ";if(a.trim().length<3)return false;return t.keys.some(k=>{const kk=norm(k);return a.includes(" "+kk+" ")||a.split(" ").some(w=>w.length>=4&&1-lev(w,kk)/Math.max(w.length,kk.length)>=.8)})}
+
+// iTunes lookup via JSONP (works from a local file)
+// Preview clips resolved in advance, so the phone never needs Apple's search service
+const PREV={"0":"AudioPreview125/v4/28/dc/53/28dc538a-9e6d-cbc8-75c6-c002057eb208/mzaf_15286287880018081717","1":"AudioPreview211/v4/9f/90/2b/9f902bef-715a-3f38-596d-8238baa021c4/mzaf_14987103128340067783","2":"AudioPreview126/v4/d6/1b/54/d61b5496-abc7-2eda-9212-1b1e51a9f4e8/mzaf_13120276391741948977","3":"AudioPreview126/v4/a7/7c/4c/a77c4c1e-ff50-3dea-c765-05dd1ba93de7/mzaf_8752272263069311242","4":"AudioPreview116/v4/2f/03/53/2f03535b-53bd-62d8-6006-1c07d8b6b278/mzaf_7461059548767970690","5":"AudioPreview211/v4/cd/c6/7f/cdc67f82-a3b8-a8ca-cefe-6ade5b6b3f0d/mzaf_11331458498597517525","6":"AudioPreview211/v4/ff/8d/01/ff8d01af-79ad-a090-661b-d3ea441b5716/mzaf_3401885421467126498","7":"AudioPreview211/v4/8a/96/14/8a9614d9-a8fb-13c7-19ee-e378970281ec/mzaf_10344958516531858762","8":"AudioPreview221/v4/20/1e/37/201e370d-e6ce-e332-7ca2-e1194678b731/mzaf_14919242281476177210","9":"AudioPreview221/v4/ec/fd/59/ecfd594a-4972-685b-ec8c-6a603db9b750/mzaf_1179765821556266680","10":"AudioPreview211/v4/e1/1b/b5/e11bb5f2-7696-8ca4-66b6-7f100c917383/mzaf_5774520504943714384","11":"AudioPreview116/v4/8a/14/f7/8a14f712-9b78-ee96-3737-1591edac3ee5/mzaf_857747581512491164","12":"AudioPreview221/v4/7d/25/ae/7d25ae8a-49ee-f646-1401-9cd579892ce1/mzaf_14281223272272808515","13":"AudioPreview221/v4/c4/07/1c/c4071c9a-6bb5-acff-df4a-82a97c15f528/mzaf_1939266347712106836","14":"AudioPreview211/v4/54/e8/0a/54e80a8b-1d60-6b59-e908-6fd65c4ff783/mzaf_2469862574651846302","15":"AudioPreview221/v4/af/5d/60/af5d603d-d0db-c066-3fe6-54bb2b51bdfb/mzaf_1714770531795139058","16":"AudioPreview221/v4/34/8e/d9/348ed9a3-528b-23ca-d17c-b4c49873806d/mzaf_17573888441542538126","17":"AudioPreview211/v4/46/57/ad/4657ad07-9bb1-a8f9-75d3-61a3f1d3dc8b/mzaf_2837170089287274786","18":"AudioPreview211/v4/91/66/1f/91661f17-3aeb-daa6-64e1-e9560e4468d2/mzaf_4598471433575455143","19":"AudioPreview211/v4/0f/0f/df/0f0fdf2f-48bc-fddb-3e68-5aefd11aa0cb/mzaf_12579562674524591415","20":"AudioPreview221/v4/0f/e5/ae/0fe5ae63-c3bb-211b-ba0b-632b832c0fdf/mzaf_1438080046212532272","21":"AudioPreview125/v4/96/4b/1c/964b1cee-336b-4592-e80f-a1111001c0e4/mzaf_9467994379091568115","22":"AudioPreview211/v4/07/21/2d/07212def-15a0-7174-f1ce-dfa0a50e09c1/mzaf_1914921341329297676","23":"AudioPreview221/v4/79/fd/4e/79fd4e02-97d7-b67f-5475-87c5d829f65b/mzaf_4049311634594558453","24":"AudioPreview221/v4/63/9f/c3/639fc3ef-ae17-2bd5-2b1b-a6c94d176505/mzaf_8536814682074552002","25":"AudioPreview125/v4/4e/22/1f/4e221f93-680d-eec1-e271-f1d05e43f1c8/mzaf_8413619134759050932","26":"AudioPreview211/v4/b3/ef/ca/b3efca47-2e5c-adba-a9b0-a20b66d61eda/mzaf_13758391342969477553","27":"AudioPreview221/v4/97/78/0d/97780d23-2dd2-0762-dc15-725cbe9cd0d3/mzaf_7335251262646326146","28":"AudioPreview211/v4/69/d9/7d/69d97d56-6fd3-57d6-9ea5-c2cee32428e0/mzaf_11468204787343293593","29":"AudioPreview211/v4/0f/76/b9/0f76b9a9-31a1-e25d-5a57-7b39aa2d1928/mzaf_14463785038631714464","30":"AudioPreview211/v4/b6/e5/99/b6e599f2-db62-aead-e577-9ac4b8c31dce/mzaf_7124507397759879735","31":"AudioPreview221/v4/4f/a1/67/4fa167c4-982f-7471-acb7-4d4fbf032549/mzaf_140307737803703812","32":"AudioPreview221/v4/e9/34/fb/e934fbad-dbba-4ab7-01e9-090f7a6829a4/mzaf_4167164513099182753","33":"AudioPreview211/v4/eb/59/38/eb5938fa-bcf5-db35-d6ec-2b1ade3f14db/mzaf_13707640858245932595","34":"AudioPreview221/v4/1a/4f/5f/1a4f5f24-d31a-ff55-824c-0a58017bfddc/mzaf_15058433942124844297","35":"AudioPreview221/v4/59/73/49/5973492e-0bd6-b5d6-42e3-967094b8154a/mzaf_3994096924263216118","36":"AudioPreview221/v4/c1/16/1a/c1161a98-07b1-62f6-82db-75a2bbd67277/mzaf_13649866255842287690","37":"AudioPreview221/v4/97/96/04/979604f2-104e-b7d9-f2b3-a85b33459540/mzaf_16937946755310329496","38":"AudioPreview221/v4/a9/a5/dd/a9a5dd13-75f5-1f84-6ed6-c69744007dbc/mzaf_17584999384539053401","39":"AudioPreview211/v4/72/29/00/722900ce-f063-d388-d18e-580e5dbd97e0/mzaf_17549092350679430877","40":"AudioPreview211/v4/fa/7b/19/fa7b19b1-08ba-1471-7459-31c4fa5f4a75/mzaf_15793661495121678495","41":"AudioPreview221/v4/31/98/6e/31986ea0-a09f-605e-959b-1b1ba1244e09/mzaf_1783895410955153834"};
+const PBASE="https://audio-ssl.itunes.apple.com/itunes-assets/",PEXT=".plus.aac.p.m4a";
+const cache={};let cbN=0;
+const apiUrl=t=>"https://itunes.apple.com/search?media=music&entity=song&limit=25&country=de&term="+encodeURIComponent(t.term);
+function pick(t,data){
+  const items=(data.results||[]).filter(x=>x.previewUrl);
+  const song=norm(t.song).split(" ")[0];
+  const score=x=>{let v=0;const tn=norm(x.trackName),an=norm(x.artistName);
+    if(tn.includes(norm(t.song)))v+=4;else if(tn.includes(song))v+=2;
+    if(t.keys.some(k=>an.includes(norm(k))))v+=3;
+    if(/live|remix|cover|karaoke/.test(tn))v-=1;return v};
+  items.sort((a,b)=>score(b)-score(a));
+  if(!items.length)throw new Error("Apple returned no preview for this track");
+  return items[0];
+}
+function jsonp(url){
+  return new Promise((res,rej)=>{
+    const name="__it"+(cbN++);const s=document.createElement("script");
+    const timer=setTimeout(()=>{cleanup();rej(new Error("no answer from Apple (timeout)"))},9000);
+    function cleanup(){clearTimeout(timer);delete window[name];s.remove()}
+    window[name]=d=>{cleanup();res(d)};
+    s.src=url+"&callback="+name;
+    s.onerror=()=>{cleanup();rej(new Error("connection to Apple blocked"))};
+    document.head.appendChild(s);
+  });
+}
+async function lookup(t){
+  if(cache[t.id])return cache[t.id];
+  if(PREV[t.id])return cache[t.id]={previewUrl:PBASE+PREV[t.id]+PEXT};
+  let data;
+  try{const r=await fetch(apiUrl(t));if(!r.ok)throw new Error("HTTP "+r.status);data=await r.json()}
+  catch(e){data=await jsonp(apiUrl(t))}
+  return cache[t.id]=pick(t,data);
+}
+
+// state
+let round=[],idx=0,points=0,results=[],audio=null,tick=null,revealed=false;
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+function fillSelects(){
+  const f=$("#fPeriod");f.innerHTML='<option value="">All eras</option>'+PERIODS.map(p=>`<option>${p}</option>`).join("");
+  const s=store.get("bt_settings");if(s){f.value=s.era||"";$("#fSize").value=s.size||"10"}
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function newRound(){
+  stop();const era=$("#fPeriod").value,size=+$("#fSize").value;store.set("bt_settings",{era,size:String(size)});
+  round=shuffle(T.filter(t=>!era||t.era===era)).slice(0,size);idx=0;points=0;results=[];updScore();renderQ();
+}
+function updScore(){$("#scoreBig").textContent=points;$("#scoreSmall").textContent=`of ${round.length*3} points this round`}
+function stop(){if(audio){audio.pause();audio=null}clearInterval(tick);setRing(0);const b=$("#playBtn");if(b)b.textContent="▶"}
+function setRing(f){const c=$("#ring");if(c)c.style.strokeDashoffset=283*(1-f)}
+
+function renderQ(){
+  revealed=false;const t=round[idx];
+  $("#card").innerHTML=`
+   <div class="count">TRACK ${idx+1} / ${round.length}</div>
+   <div class="player">
+     <div class="disc">
+       <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="var(--line)" stroke-width="5"/><circle id="ring" cx="50" cy="50" r="45" fill="none" stroke="var(--brass)" stroke-width="5" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round"/></svg>
+       <button id="playBtn" type="button" aria-label="Play the clip">▶</button>
+     </div>
+     <div class="ptext"><strong id="pStatus">Press play</strong><small id="pHint">${CLIP}-second extract, details hidden</small></div>
+   </div>
+   <form class="fields" id="ansForm" autocomplete="off">
+     <label for="aTitle">Title<input id="aTitle" placeholder="e.g. So What"></label>
+     <label for="aMus">Musician / band<input id="aMus" placeholder="e.g. Miles Davis"></label>
+     <label for="aEra">Era<select id="aEra"><option value="">Choose the era…</option>${PERIODS.map(p=>`<option>${p}</option>`).join("")}</select></label>
+     <div class="row"><button class="solid" type="submit">Reveal</button><button type="button" id="skipBtn">I don't know</button></div>
+   </form>
+   <div id="rev"></div>`;
+  $("#playBtn").onclick=()=>play(t);
+  $("#ansForm").onsubmit=e=>{e.preventDefault();reveal(t)};
+  $("#skipBtn").onclick=()=>reveal(t);
+  lookup(t).catch(()=>{});
+}
+
+async function play(t){
+  if(audio&&!audio.paused){stop();return}
+  $("#pStatus").textContent="Loading…";
+  let item;try{item=await lookup(t)}catch(e){$("#pStatus").textContent="No clip";
+    const inFrame=window.top!==window.self;
+    $("#pHint").innerHTML='<span class="err">'+escapeHtml(e.message||"Couldn't load the preview")+'. '+(inFrame?"This looks like a preview window, which blocks Apple. Download the file and open it in Safari or Chrome.":"Check your connection, or reveal and use the Apple Music link.")+'</span>';return}
+  stop();audio=new Audio(item.previewUrl);
+  try{await audio.play()}catch(e){$("#pStatus").textContent="Blocked";return}
+  $("#playBtn").textContent="■";$("#pStatus").textContent="Listening";
+  const start=Date.now(),max=revealed?30:CLIP;
+  tick=setInterval(()=>{const s=(Date.now()-start)/1000;setRing(Math.min(s/max,1));
+    if(s>=max||audio.ended){stop();$("#pStatus").textContent="Play again"}},100);
+}
+
+function reveal(t){
+  if(revealed)return;revealed=true;
+  const ans={title:$("#aTitle").value,mus:$("#aMus").value,era:$("#aEra").value};
+  const r={t,ok:{title:titleOk(ans.title,t),mus:musicianOk(ans.mus,t),era:ans.era===t.era},ans};
+  results[idx]=r;
+  $("#ansForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);
+  $("#pHint").textContent="Replay now plays the full 30-second preview";
+  const yr=document.createElement("div");yr.className="reveal";
+  yr.innerHTML=`
+    <div class="answer"><h2>${t.song}</h2><p>${t.musician} · <em>${t.album}</em>, ${t.year}</p><p>${t.era}</p></div>
+    <div class="checks" id="checks"></div>
+    <div class="note">${t.note}</div>
+    <div class="row"><button class="solid" id="nextBtn" type="button">${idx+1<round.length?"Next track":"See results"}</button>
+    <a href="https://music.apple.com/search?term=${encodeURIComponent(t.term)}" target="_blank" rel="noopener" style="align-self:center">Open in Apple Music</a></div>`;
+  $("#rev").appendChild(yr);
+  drawChecks();
+  $("#nextBtn").onclick=()=>{stop();idx++;idx<round.length?renderQ():summary()};
+  $("#nextBtn").focus();
+}
+function drawChecks(){
+  const r=results[idx];points=results.reduce((s,x)=>s+(x?Object.values(x.ok).filter(Boolean).length:0),0);updScore();
+  const rows=[["title","Title",r.ans.title],["mus","Musician",r.ans.mus],["era","Era",r.ans.era]];
+  $("#checks").innerHTML=rows.map(([k,l,v])=>`<div class="chk ${r.ok[k]?"ok":"no"}"><span class="mark">${r.ok[k]?"✓":"✗"}</span><span class="lab">${l}</span><span class="yours">${v?escapeHtml(v):"—"}</span>${k!=="era"?`<button type="button" data-k="${k}">${r.ok[k]?"Count wrong":"Count right"}</button>`:"<span></span>"}</div>`).join("");
+  $("#checks").querySelectorAll("button").forEach(b=>b.onclick=()=>{r.ok[b.dataset.k]=!r.ok[b.dataset.k];drawChecks()});
+}
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function summary(){
+  const miss=results.filter(r=>!(r.ok.title&&r.ok.mus&&r.ok.era));
+  const best=store.get("bt_best")||0;if(points>best)store.set("bt_best",points);
+  $("#card").innerHTML=`<div class="summary"><div class="count">ROUND COMPLETE</div>
+   <h2>${points} / ${round.length*3} points</h2>
+   <p class="sub">Best round so far: ${Math.max(best,points)} points.</p>
+   ${miss.length?`<p style="margin:14px 0 0">To listen to again:</p><ul>${miss.map(r=>`<li><strong style="color:var(--fg)">${r.t.song}</strong>, ${r.t.musician} (${r.t.era}, ${r.t.year})</li>`).join("")}</ul>`:'<p>Perfect round.</p>'}
+   </div><div class="row"><button class="solid" type="button" id="again">Play another round</button>${miss.length?'<button type="button" id="retry">Retry only the misses</button>':""}</div>`;
+  $("#again").onclick=newRound;
+  const rb=$("#retry");if(rb)rb.onclick=()=>{round=shuffle(miss.map(r=>r.t));idx=0;points=0;results=[];updScore();renderQ()};
+}
+
+fillSelects();$("#newRound").onclick=newRound;newRound();
+</script>
+</body>
+</html>
